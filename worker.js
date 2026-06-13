@@ -42,7 +42,7 @@ proxies:
     server: 144.48.108.121
     port: 5452
     
-- name: proxy1
+  - name: proxy1
     type: http
     server: 144.48.108.122
     port: 5452
