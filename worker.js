@@ -37,12 +37,12 @@ proxies:
     server: 45.115.112.194
     port: 11311
 
-  - name: proxy1
+  - name: proxy2
     type: http
     server: 144.48.108.121
     port: 5452
     
-  - name: proxy1
+  - name: proxy3
     type: http
     server: 144.48.108.122
     port: 5452
