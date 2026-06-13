@@ -37,7 +37,16 @@ proxies:
     server: 45.115.112.194
     port: 11311
 
-
+  - name: proxy1
+    type: http
+    server: 144.48.108.121
+    port: 5452
+    
+- name: proxy1
+    type: http
+    server: 144.48.108.122
+    port: 5452
+    
     
 `
 
@@ -67,12 +76,13 @@ proxy-groups:
     type: select
     proxies:
       - LOAD-BALANCE
+      - STABLE
       
   - name: STABLE
     type: url-test
     url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
+    interval: 10
+    tolerance: 500000
     use:
       - myprovider
 
