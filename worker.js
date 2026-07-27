@@ -115,8 +115,8 @@ proxy-groups:
   - name: STABLE
     type: url-test
     url: http://www.gstatic.com/generate_204
-    interval: 10
-    tolerance: 500000
+    interval: 300
+    tolerance: 50
     use:
       - myprovider
 
