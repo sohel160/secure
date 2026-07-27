@@ -32,56 +32,55 @@ export default {
       const proxies = `
 proxies:
 
-  - name: proxy1
+  - name: "🇧🇩 Server-1"
     type: http
-    server: 103.115.242.240
-    port: 2610
+    server: 103.84.39.93
+    port: 3258
 
-  - name: proxy2
+  - name: "🇧🇩 Server-2"
     type: http
-    server: 103.172.15.9
-    port: 5452
+    server: 103.84.39.94
+    port: 3258
 
-  - name: proxy3
+  - name: "🇧🇩 Server-3"
     type: http
-    server: 144.48.108.121
-    port: 5452
+    server: 103.84.39.92
+    port: 3258
 
-  - name: proxy4
+  - name: "🇧🇩 Server-4"
     type: http
-    server: 144.48.108.122
-    port: 5452
-    
-  - name: proxy5
-    type: http
-    server: 103.172.14.1
-    port: 5452
+    server: 103.84.39.95
+    port: 3258
 
-  - name: proxy6
+  - name: "🇧🇩 Server-5"
     type: http
-    server: 103.172.15.5
-    port: 5452
+    server: 103.84.39.113
+    port: 3258
 
-  - name: proxy7
+  - name: "🇧🇩 Server-6"
     type: http
-    server: 103.172.15.17
-    port: 5452
-    
-  - name: proxy8
-    type: http
-    server: 103.69.151.244
-    port: 2610
-    
-  - name: proxy9
-    type: http
-    server: 103.172.14.253
-    port: 5452
+    server: 113.212.109.211
+    port: 8945
 
-  - name: proxy10
+  - name: "🇧🇩 Server-7"
     type: http
-    server: 103.172.14.245
-    port: 5452
-    
+    server: 113.212.109.210
+    port: 8945
+
+  - name: "🇧🇩 Server-8"
+    type: http
+    server: 113.212.109.209
+    port: 8945
+
+  - name: "🇧🇩 Server-9"
+    type: http
+    server: 113.212.109.208
+    port: 8945
+
+  - name: "🇧🇩 Server-10"
+    type: http
+    server: 113.212.109.208
+    port: 8945
     
 `
 
