@@ -81,6 +81,56 @@ proxies:
     type: http
     server: 113.212.109.208
     port: 8945
+
+  - name: "🇧🇩 Server-11"
+    type: http
+    server: 103.84.36.225
+    port: 52148
+
+  - name: "🇧🇩 Server-12"
+    type: http
+    server: 103.84.36.73
+    port: 52148
+
+  - name: "🇧🇩 Server-13"
+    type: http
+    server: 103.84.36.169
+    port: 52148
+
+  - name: "🇧🇩 Server-14"
+    type: http
+    server: 103.84.37.225
+    port: 52148
+
+  - name: "🇧🇩 Server-15"
+    type: http
+    server: 103.84.37.161
+    port: 52148
+
+  - name: "🇧🇩 Server-16"
+    type: http
+    server: 103.84.36.237
+    port: 22622
+
+  - name: "🇧🇩 Server-17"
+    type: http
+    server: 103.84.37.196
+    port: 22622
+
+  - name: "🇧🇩 Server-18"
+    type: http
+    server: 103.84.37.123
+    port: 22622
+
+  - name: "🇧🇩 Server-19"
+    type: http
+    server: 103.84.37.72
+    port: 22622
+
+  - name: "🇧🇩 Server-20"
+    type: http
+    server: 113.212.109.208
+    port: 8945
     
 `
 
@@ -106,7 +156,7 @@ proxy-providers:
 
 proxy-groups:
   
-  - name: SELECTOR🔥
+  - name: SELECTOR🙈
     type: select
     proxies:
       - LOAD-BALANCE
@@ -135,15 +185,15 @@ proxy-groups:
 
 
 rules:
-  - DOMAIN-SUFFIX,googlevideo.com,SELECTOR🔥
-  - DOMAIN-SUFFIX,youtube.com,SELECTOR🔥
-  - DOMAIN-SUFFIX,gstatic.com,SELECTOR🔥
-  - DOMAIN-SUFFIX,googleapis.com,SELECTOR🔥
-  - DOMAIN-SUFFIX,cloudflare.com,SELECTOR🔥
-  - DOMAIN-SUFFIX,akamaihd.net,SELECTOR🔥
-  - DOMAIN-SUFFIX,fastly.net,SELECTOR🔥
-  - DOMAIN-SUFFIX,cdn.jsdelivr.net,SELECTOR🔥
-  - MATCH,SELECTOR🔥
+  - DOMAIN-SUFFIX,googlevideo.com,SELECTOR🙈
+  - DOMAIN-SUFFIX,youtube.com,SELECTOR🙈
+  - DOMAIN-SUFFIX,gstatic.com,SELECTOR🙈
+  - DOMAIN-SUFFIX,googleapis.com,SELECTOR🙈
+  - DOMAIN-SUFFIX,cloudflare.com,SELECTOR🙈
+  - DOMAIN-SUFFIX,akamaihd.net,SELECTOR🙈
+  - DOMAIN-SUFFIX,fastly.net,SELECTOR🙈
+  - DOMAIN-SUFFIX,cdn.jsdelivr.net,SELECTOR🙈
+  - MATCH,SELECTOR🙈
 `
 
     return new Response(config, {
