@@ -155,26 +155,28 @@ proxy-providers:
       interval: 60
 
 proxy-groups:
-  
   - name: SELECTOR🙈
     type: select
     proxies:
-      - LOAD-BALANCE
       - STABLE
-      
+      - LOAD-BALANCE
+      - ALL
+
   - name: STABLE
     type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
+    url: https://www.gstatic.com/generate_204
+    interval: 120
+    tolerance: 20
+    lazy: false
     use:
       - myprovider
 
   - name: LOAD-BALANCE
     type: load-balance
-    strategy: round-robin
-    url: http://www.gstatic.com/generate_204
-    interval: 60
+    strategy: consistent-hashing
+    url: https://www.gstatic.com/generate_204
+    interval: 120
+    lazy: false
     use:
       - myprovider
 
