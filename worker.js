@@ -31,108 +31,92 @@ export default {
 
       const proxies = `
 proxies:
+ - name: "HTTP-01"
+    type: http
+    server: 103.115.242.240
+    port: 2610
 
-  - name: "🇧🇩 Server-1"
+  - name: "HTTP-06"
+    type: http
+    server: 103.172.15.17
+    port: 5452
+
+  - name: "HTTP-07"
+    type: http
+    server: 103.172.15.21
+    port: 5452
+
+  - name: "HTTP-08"
+    type: http
+    server: 103.172.14.253
+    port: 5452
+
+  - name: "HTTP-09"
+    type: http
+    server: 103.172.14.245
+    port: 5452
+
+  - name: "HTTP-10"
+    type: http
+    server: 103.172.14.1
+    port: 5452
+
+  - name: "HTTP-11"
+    type: http
+    server: 103.172.14.4
+    port: 5452
+
+  - name: "HTTP-13"
+    type: http
+    server: 103.172.14.5
+    port: 5452
+
+  - name: "HTTP-14"
+    type: http
+    server: 103.172.14.17
+    port: 5452
+
+  - name: "HTTP-15"
+    type: http
+    server: 103.172.14.33
+    port: 5452
+
+  - name: "HTTP-19"
+    type: http
+    server: 103.172.14.72
+    port: 5452
+
+  - name: "HTTP-20"
+    type: http
+    server: 103.172.14.250
+    port: 5452
+
+  - name: "BD-01"
     type: http
     server: 103.84.39.93
     port: 3258
 
-  - name: "🇧🇩 Server-2"
+  - name: "BD-02"
     type: http
     server: 103.84.39.94
     port: 3258
 
-  - name: "🇧🇩 Server-3"
+  - name: "BD-03"
     type: http
     server: 103.84.39.92
     port: 3258
 
-  - name: "🇧🇩 Server-4"
+  - name: "BD-04"
     type: http
     server: 103.84.39.95
     port: 3258
 
-  - name: "🇧🇩 Server-5"
+  - name: "BD-05"
     type: http
     server: 103.84.39.113
     port: 3258
 
-  - name: "🇧🇩 Server-6"
-    type: http
-    server: 113.212.109.211
-    port: 8945
-
-  - name: "🇧🇩 Server-7"
-    type: http
-    server: 113.212.109.210
-    port: 8945
-
-  - name: "🇧🇩 Server-8"
-    type: http
-    server: 113.212.109.209
-    port: 8945
-
-  - name: "🇧🇩 Server-9"
-    type: http
-    server: 113.212.109.208
-    port: 8945
-
-  - name: "🇧🇩 Server-10"
-    type: http
-    server: 113.212.109.208
-    port: 8945
-
-  - name: "🇧🇩 Server-11"
-    type: http
-    server: 103.84.36.225
-    port: 52148
-
-  - name: "🇧🇩 Server-12"
-    type: http
-    server: 103.84.36.73
-    port: 52148
-
-  - name: "🇧🇩 Server-13"
-    type: http
-    server: 103.84.36.169
-    port: 52148
-
-  - name: "🇧🇩 Server-14"
-    type: http
-    server: 103.84.37.225
-    port: 52148
-
-  - name: "🇧🇩 Server-15"
-    type: http
-    server: 103.84.37.161
-    port: 52148
-
-  - name: "🇧🇩 Server-16"
-    type: http
-    server: 103.84.36.237
-    port: 22622
-
-  - name: "🇧🇩 Server-17"
-    type: http
-    server: 103.84.37.196
-    port: 22622
-
-  - name: "🇧🇩 Server-18"
-    type: http
-    server: 103.84.37.123
-    port: 22622
-
-  - name: "🇧🇩 Server-19"
-    type: http
-    server: 103.84.37.72
-    port: 22622
-
-  - name: "🇧🇩 Server-20"
-    type: http
-    server: 113.212.109.208
-    port: 8945
-    
-`
+   `
 
       return new Response(proxies, {
         headers: { "Content-Type": "text/plain" }
