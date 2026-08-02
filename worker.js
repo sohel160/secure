@@ -3,12 +3,12 @@ export default {
 
     const url = new URL(request.url)
 
-    // 🔐 token protection
+    // 🔐 Token protection
     if (url.searchParams.get("token") !== "abc123") {
       return new Response("Forbidden", { status: 403 })
     }
 
-    // 🔍 allow only Clash clients
+    // 🔍 Allow only Clash clients
     const ua = request.headers.get("User-Agent") || ""
 
     const allowedUA = [
@@ -17,7 +17,8 @@ export default {
       "Meta",
       "FiClash",
       "Stash",
-      "okhttp"
+      "okhttp",
+      "Go-http-client"
     ]
 
     if (!allowedUA.some(a => ua.includes(a))) {
@@ -29,9 +30,8 @@ export default {
     // =========================
     if (url.pathname === "/proxies") {
 
-      const proxies = `
-proxies:
- - name: "HTTP-01"
+      const proxies = `proxies:
+  - name: "HTTP-01"
     type: http
     server: 103.115.242.240
     port: 2610
@@ -114,20 +114,17 @@ proxies:
   - name: "BD-05"
     type: http
     server: 103.84.39.113
-    port: 3258
-
-   `
+    port: 3258`
 
       return new Response(proxies, {
-        headers: { "Content-Type": "text/plain" }
+        headers: { "Content-Type": "text/yaml; charset=utf-8" }
       })
     }
 
     // =========================
     // ⚡ MAIN CONFIG
     // =========================
-    const config = `
-proxy-providers:
+    const config = `proxy-providers:
   myprovider:
     type: http
     url: "${url.origin}/proxies?token=abc123"
@@ -169,7 +166,6 @@ proxy-groups:
     use:
       - myprovider
 
-
 rules:
   - DOMAIN-SUFFIX,googlevideo.com,SELECTOR🙈
   - DOMAIN-SUFFIX,youtube.com,SELECTOR🙈
@@ -179,11 +175,11 @@ rules:
   - DOMAIN-SUFFIX,akamaihd.net,SELECTOR🙈
   - DOMAIN-SUFFIX,fastly.net,SELECTOR🙈
   - DOMAIN-SUFFIX,cdn.jsdelivr.net,SELECTOR🙈
-  - MATCH,SELECTOR🙈
-`
+  - MATCH,SELECTOR🙈`
 
     return new Response(config, {
-      headers: { "Content-Type": "text/plain" }
+      headers: { "Content-Type": "text/yaml; charset=utf-8" }
     })
   }
 }
+
