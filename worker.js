@@ -43,7 +43,7 @@ export default {
 
   - name: "HTTP-07"
     type: http
-    server: 103.172.15.21
+    server: 103.172.15.17
     port: 5452
 
   - name: "HTTP-08"
