@@ -38,58 +38,58 @@ export default {
 
   - name: "HTTP-06"
     type: http
-    server: 103.172.15.17
-    port: 5452
+    server: 103.196.233.41
+    port: 6321
 
   - name: "HTTP-07"
     type: http
-    server: 103.172.15.17
-    port: 5452
+    server: 103.196.235.234
+    port: 6321
 
   - name: "HTTP-08"
     type: http
-    server: 103.172.14.253
-    port: 5452
+    server: 103.196.235.233
+    port: 6321
 
   - name: "HTTP-09"
     type: http
-    server: 103.172.14.245
-    port: 5452
+    server: 103.115.242.157
+    port: 2610
 
   - name: "HTTP-10"
     type: http
-    server: 103.172.14.1
-    port: 5452
+    server: 103.115.242.1
+    port: 7860
 
   - name: "HTTP-11"
     type: http
-    server: 103.172.14.4
-    port: 5452
+    server: 180.149.232.85
+    port: 2610
 
   - name: "HTTP-13"
     type: http
-    server: 103.172.14.5
-    port: 5452
+    server: 180.149.234.22
+    port: 2610
 
   - name: "HTTP-14"
     type: http
-    server: 103.172.14.17
-    port: 5452
+    server: 103.84.36.237
+    port: 22622
 
   - name: "HTTP-15"
     type: http
-    server: 103.172.14.33
-    port: 5452
+    server: 103.84.37.196
+    port: 22622
 
   - name: "HTTP-19"
     type: http
-    server: 103.172.14.72
-    port: 5452
+    server: 103.84.37.123
+    port: 22622
 
   - name: "HTTP-20"
     type: http
-    server: 103.172.14.250
-    port: 5452
+    server: 103.84.37.72
+    port: 22622
 
   - name: "BD-01"
     type: http
