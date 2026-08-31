@@ -31,90 +31,13 @@ export default {
     if (url.pathname === "/proxies") {
 
       const proxies = `proxies:
-  - name: "HTTP-01"
-    type: http
-    server: 103.115.242.240
-    port: 2610
 
-  - name: "HTTP-06"
-    type: http
-    server: 103.196.233.41
-    port: 6321
+    				 - name: "HTTP-01"
+   	    			 type: http
+  	  		     server: 103.115.242.240
+    				   port: 
 
-  - name: "HTTP-07"
-    type: http
-    server: 103.196.235.234
-    port: 6321
-
-  - name: "HTTP-08"
-    type: http
-    server: 103.196.235.233
-    port: 6321
-
-  - name: "HTTP-09"
-    type: http
-    server: 103.115.242.157
-    port: 2610
-
-  - name: "HTTP-10"
-    type: http
-    server: 103.115.242.1
-    port: 7860
-
-  - name: "HTTP-11"
-    type: http
-    server: 180.149.232.85
-    port: 2610
-
-  - name: "HTTP-13"
-    type: http
-    server: 180.149.234.22
-    port: 2610
-
-  - name: "HTTP-14"
-    type: http
-    server: 103.84.36.237
-    port: 22622
-
-  - name: "HTTP-15"
-    type: http
-    server: 103.84.37.196
-    port: 22622
-
-  - name: "HTTP-19"
-    type: http
-    server: 103.84.37.123
-    port: 22622
-
-  - name: "HTTP-20"
-    type: http
-    server: 103.84.37.72
-    port: 22622
-
-  - name: "BD-01"
-    type: http
-    server: 103.84.39.93
-    port: 3258
-
-  - name: "BD-02"
-    type: http
-    server: 103.84.39.94
-    port: 3258
-
-  - name: "BD-03"
-    type: http
-    server: 103.84.39.92
-    port: 3258
-
-  - name: "BD-04"
-    type: http
-    server: 103.84.39.95
-    port: 3258
-
-  - name: "BD-05"
-    type: http
-    server: 103.84.39.113
-    port: 3258`
+               '
 
       return new Response(proxies, {
         headers: { "Content-Type": "text/yaml; charset=utf-8" }
