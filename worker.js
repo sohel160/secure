@@ -31,16 +31,16 @@ export default {
     if (url.pathname === "/proxies") {
 
       const proxies = `proxies:
-
-    				 - name: "HTTP-01"
-   	    			 type: http
-  	  		     server: 103.115.242.240
-    				   port: 
-
-               '
+  - name: "HTTP-01"
+    type: http
+    server: 103.115.242.240
+    port: 
+`
 
       return new Response(proxies, {
-        headers: { "Content-Type": "text/yaml; charset=utf-8" }
+        headers: {
+          "Content-Type": "text/yaml; charset=utf-8"
+        }
       })
     }
 
@@ -101,8 +101,9 @@ rules:
   - MATCH,SELECTOR🙈`
 
     return new Response(config, {
-      headers: { "Content-Type": "text/yaml; charset=utf-8" }
+      headers: {
+        "Content-Type": "text/yaml; charset=utf-8"
+      }
     })
   }
 }
-
