@@ -46,14 +46,14 @@ export default {
     password: 1
 
   - name: "BD-🇧🇩03"
-    type: http
+    type: socks5
     server: 103.126.219.255
     port: 65088
     username: 1
     password: 1
 
   - name: "BD-🇧🇩04"
-    type: http
+    type: socks5
     server: 103.89.24.221
     port: 65088
     username: 1
