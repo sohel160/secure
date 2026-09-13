@@ -31,10 +31,33 @@ export default {
     if (url.pathname === "/proxies") {
 
       const proxies = `proxies:
-  - name: "HTTP-01"
+  - name: "🇧🇩 BD-1"
+    type: socks5
+    server: 103.126.219.254
+    port: 65088
+    username: 1
+    password: 1
+
+  - name: "🇧🇩 BD-02"
+    type: socks5
+    server: 103.126.219.253
+    port: 65088
+    username: 1
+    password: 1
+
+  - name: "BD-🇧🇩03"
     type: http
-    server: 103.115.242.240
-    port: 
+    server: 103.126.219.255
+    port: 65088
+    username: 1
+    password: 1
+
+  - name: "BD-🇧🇩04"
+    type: http
+    server: 103.89.24.221
+    port: 65088
+    username: 1
+    password: 1
 `
 
       return new Response(proxies, {
