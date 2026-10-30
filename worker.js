@@ -1,89 +1,256 @@
 
-export default {
-  async fetch(request) {
-    const url = new URL(request.url)
+const BASE_URL = "https://xnetapi.xrorx.com";
 
-    // Token protection
-    if (url.searchParams.get("token") !== "abc123") {
-      return new Response("Forbidden", { status: 403 })
+const KEY_PARTS = [
+  "Vkh3R1JTZEhqYlNQ",
+  "VEw0Vi82WmsyM1Rs",
+  "MW16eGNmZkFBMzcz",
+  "WUJnODRTbz0="
+];
+
+const SALT = "xn3t_v2_s@lt_2026";
+
+function decodeBase64(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
+
+function decodeUrlBase64(value) {
+  let s = value.replace(/-/g, "+").replace(/_/g, "/");
+  s += "=".repeat((4 - s.length % 4) % 4);
+  return decodeBase64(s);
+}
+
+async function deriveKeys() {
+  const joined = KEY_PARTS.join("");
+  const step1 = decodeBase64(joined);
+  const password = decodeBase64(
+    new TextDecoder().decode(step1)
+  );
+
+  const material = await crypto.subtle.importKey(
+    "raw",
+    password,
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+
+  const derived = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: new TextEncoder().encode(SALT),
+        iterations: 100000,
+        hash: "SHA-256"
+      },
+      material,
+      256
+    )
+  );
+
+  return {
+    hmac: derived.slice(0, 16),
+    aes: derived.slice(16, 32)
+  };
+}
+
+async function decryptCredential(token, keys) {
+  const data = decodeUrlBase64(token);
+
+  if (data.length < 57 || data[0] !== 0x80) {
+    throw new Error("Invalid credential token");
+  }
+
+  const macOffset = data.length - 32;
+  const signedData = data.slice(0, macOffset);
+  const suppliedMac = data.slice(macOffset);
+
+  const hmacKey = await crypto.subtle.importKey(
+    "raw",
+    keys.hmac,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+
+  const valid = await crypto.subtle.verify(
+    "HMAC",
+    hmacKey,
+    suppliedMac,
+    signedData
+  );
+
+  if (!valid) {
+    throw new Error("Credential HMAC verification failed");
+  }
+
+  const aesKey = await crypto.subtle.importKey(
+    "raw",
+    keys.aes,
+    { name: "AES-CBC" },
+    false,
+    ["decrypt"]
+  );
+
+  const plaintext = await crypto.subtle.decrypt(
+    {
+      name: "AES-CBC",
+      iv: data.slice(9, 25)
+    },
+    aesKey,
+    data.slice(25, macOffset)
+  );
+
+  const parts = new TextDecoder().decode(plaintext).split(":");
+
+  if (parts.length !== 4) {
+    throw new Error("Invalid proxy credential format");
+  }
+
+  const [ip, port, username, password] = parts;
+
+  if (
+    !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip) ||
+    !/^\d+$/.test(port) ||
+    Number(port) < 1 ||
+    Number(port) > 65535
+  ) {
+    throw new Error("Invalid proxy address");
+  }
+
+  return { ip, port: Number(port), username, password };
+}
+
+async function apiRequest(path, token, body) {
+  const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+    "User-Agent":
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
+    "X-Client-Version": "2.0.0",
+    "X-Request-ID": `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`,
+    "X-Timestamp": String(Date.now())
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(BASE_URL + path, {
+    method: body ? "POST" : "GET",
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  if (!response.ok) {
+    throw new Error(`Xrorx API ${path}: HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function refreshProxies(env) {
+  // Login and obtain a fresh bearer token
+  const login = await apiRequest(
+    "/auth/login",
+    null,
+    {
+      email: env.XRORX_EMAIL,
+      password: env.XRORX_PASSWORD
     }
+  );
 
-    // Allow only Clash clients
-    const ua = request.headers.get("User-Agent") || ""
+  const bearer = login.accessToken || login.access_token;
 
-    const allowedUA = [
-      "Clash",
-      "clash",
-      "Meta",
-      "FiClash",
-      "Stash",
-      "okhttp",
-      "Go-http-client"
-    ]
+  if (!bearer) {
+    throw new Error("Login did not return an access token");
+  }
 
-    if (!allowedUA.some(a => ua.includes(a))) {
-      return new Response("404 Not Found", { status: 404 })
+  // Check server update information
+  await apiRequest(
+    "/api/server-checker/last-updated",
+    bearer
+  );
+
+  // Retrieve encrypted proxies
+  const rawProxies = await apiRequest(
+    "/api/server-checker/proxies",
+    bearer
+  );
+
+  if (!Array.isArray(rawProxies)) {
+    throw new Error("Unexpected proxy API response");
+  }
+
+  const keys = await deriveKeys();
+  const output = [];
+
+  for (const proxy of rawProxies) {
+    const encrypted =
+      proxy.legacyEncryptedCredentials ||
+      proxy.legacy_encrypted_credentials ||
+      proxy.encryptedCredentials ||
+      proxy.encrypted_credentials;
+
+    if (!encrypted) continue;
+
+    try {
+      const credentials = await decryptCredential(encrypted, keys);
+
+      output.push({
+        name: proxy.serverName || proxy.server_name || `BD-${output.length + 1}`,
+        ...credentials
+      });
+    } catch (error) {
+      console.error("Proxy decryption failed:", error.message);
     }
+  }
 
-    // SOCKS5 PROXY PROVIDER
-    if (url.pathname === "/proxies") {
+  if (output.length === 0) {
+    throw new Error("No valid proxies decrypted; keeping previous cache");
+  }
 
-      const proxyList = [
-        ["BD-01", "103.96.104.94", "test_w9tows80", "ISymbW1vAMtm"],
-        ["BD-02", "103.174.193.185", "test_66bg046y", "v27QCNdKHIp9"],
-        ["BD-03", "103.115.116.156", "test_rqcvhvxt", "zN48dHkD3nQI"],
-        ["BD-04", "103.111.225.174", "test_w82z07oi", "8hxAXDdVSXm1"],
-        ["BD-05", "103.135.136.69", "test_jeqmlef4", "xPAqV7Sl10X2"],
-        ["BD-06", "103.135.136.77", "test_fi500y8e", "xLmXPXA9LQxU"],
-        ["BD-07", "103.145.210.153", "test_gw0dz1m2", "8ffveETezrLX"],
-        ["BD-08", "103.153.171.81", "test_wyym1cr1", "eTCDXK7HLsBw"],
-        ["BD-09", "103.153.170.110", "test_zpr2jks3", "GnGuFZ1ZWHwM"],
-        ["BD-10", "45.118.63.42", "test_be65rgl3", "aFjsGVbfc1pB"],
-        ["BD-11", "103.79.182.146", "test_iupxdm79", "s5BGyLyajmFY"],
-        ["BD-12", "103.111.224.46", "test_h02ot9ty", "vK2jWLXxUL2q"],
-        ["BD-13", "182.48.83.111", "test_ehhqf6m0", "ASU7NILig2Pg"],
-        ["BD-14", "103.73.39.132", "test_rdlyq9ah", "2M8p1cGy9BjX"],
-        ["BD-15", "113.11.36.57", "test_9vbynsns", "QkI2wYmX0BMP"],
-        ["BD-16", "103.244.49.40", "test_fwxipydb", "xhHEOP8HqLvc"],
-        ["BD-17", "103.28.120.42", "test_hngo6t6d", "J60UJOOUxzYA"],
-        ["BD-18", "103.124.236.20", "test_itb7br9q", "yVr2QtTY4NpH"],
-        ["BD-19", "103.92.212.253", "test_ssl4zq0p", "v2vhGY950PDU"],
-        ["BD-20", "103.143.234.102", "test_z5sz6l1i", "6S1gRFdAC9Pc"],
-        ["BD-21", "114.134.91.98", "test_3oj3j1yr", "pGgQUaVsAuoU"],
-        ["BD-22", "103.178.73.1", "test_xqpme6kk", "c4SwNDiWbQzA"],
-        ["BD-23", "202.5.36.149", "test_w39rjy9w", "YbU2PMDOBfoU"],
-        ["BD-24", "103.220.205.13", "test_gymhn5xs", "jJY4ZSlzoYVF"],
-        ["BD-25", "103.118.152.36", "test_dramhvhx", "Ss26qeuR5tF5"],
-        ["BD-26", "103.16.25.141", "test_i4etgi7z", "nbdDPwtEyFs7"],
-        ["BD-27", "103.231.34.56", "test_i4p1fjqc", "nQDA0V0d9Ro7"],
-        ["BD-28", "114.130.99.148", "test_qg8bplxn", "fg3k6N6bf0g7"],
-        ["BD-29", "103.148.10.248", "test_4v6note5", "sOXw2AUaPDmo"]
-      ]
+  // Save the new list atomically as one KV value
+  await env.PROXY_KV.put(
+    "latest_proxies",
+    JSON.stringify(output)
+  );
 
-      const proxies = "proxies:\n" + proxyList.map(
-        ([name, server, username, password]) =>
-          `  - name: "🇧🇩 ${name}"\n` +
-          `    type: socks5\n` +
-          `    server: ${server}\n` +
-          `    port: 9169\n` +
-          `    username: "${username}"\n` +
-          `    password: "${password}"`
-      ).join("\n")
+  await env.PROXY_KV.put(
+    "refresh_status",
+    JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      count: output.length,
+      success: true
+    })
+  );
 
-      return new Response(proxies, {
-        headers: {
-          "Content-Type": "text/yaml; charset=utf-8",
-          "Cache-Control": "no-store"
-        }
-      })
-    }
+  console.log(`Successfully refreshed ${output.length} proxies`);
+}
 
-    // MAIN CLASH CONFIG
-    const config = `proxy-providers:
+function makeProxyYaml(proxies) {
+  const entries = proxies.map((p, i) => {
+    return [
+      `  - name: ${JSON.stringify(`🇧🇩 ${p.name || `BD-${i + 1}`}`)}`,
+      "    type: socks5",
+      `    server: ${p.ip}`,
+      `    port: ${p.port}`,
+      `    username: ${JSON.stringify(p.username)}`,
+      `    password: ${JSON.stringify(p.password)}`
+    ].join("\n");
+  });
+
+  return "proxies:\n" + entries.join("\n") + "\n";
+}
+
+function mainConfig(origin) {
+  return `proxy-providers:
   myprovider:
     type: http
-    url: "${url.origin}/proxies?token=abc123"
-    interval: 3600
+    url: "${origin}/proxies?token=abc123"
+    interval: 60
     path: ./proxies.yaml
     health-check:
       enable: true
@@ -130,12 +297,77 @@ rules:
   - DOMAIN-SUFFIX,akamaihd.net,SELECTOR🙈
   - DOMAIN-SUFFIX,fastly.net,SELECTOR🙈
   - DOMAIN-SUFFIX,cdn.jsdelivr.net,SELECTOR🙈
-  - MATCH,SELECTOR🙈`
-
-    return new Response(config, {
-      headers: {
-        "Content-Type": "text/yaml; charset=utf-8"
-      }
-    })
-  }
+  - MATCH,SELECTOR🙈`;
 }
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.searchParams.get("token") !== env.WORKER_TOKEN) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    const ua = request.headers.get("User-Agent") || "";
+
+    const allowedUA = [
+      "Clash",
+      "clash",
+      "Meta",
+      "FiClash",
+      "Stash",
+      "okhttp",
+      "Go-http-client"
+    ];
+
+    if (!allowedUA.some(a => ua.includes(a))) {
+      return new Response("404 Not Found", { status: 404 });
+    }
+
+    if (url.pathname === "/proxies") {
+      const cached = await env.PROXY_KV.get("latest_proxies");
+
+      if (!cached) {
+        return new Response("Proxy list not initialized", {
+          status: 503
+        });
+      }
+
+      return new Response(
+        makeProxyYaml(JSON.parse(cached)),
+        {
+          headers: {
+            "Content-Type": "text/yaml; charset=utf-8",
+            "Cache-Control": "no-store"
+          }
+        }
+      );
+    }
+
+    if (url.pathname === "/status") {
+      const status = await env.PROXY_KV.get("refresh_status");
+
+      return new Response(status || '{"success":false}', {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store"
+        }
+      });
+    }
+
+    return new Response(mainConfig(url.origin), {
+      headers: {
+        "Content-Type": "text/yaml; charset=utf-8",
+        "Cache-Control": "no-store"
+      }
+    });
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      refreshProxies(env).catch(error => {
+        console.error("Scheduled refresh failed:", error.message);
+      })
+    );
+  }
+};
