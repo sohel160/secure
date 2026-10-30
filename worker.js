@@ -10,6 +10,10 @@ const KEY_PARTS = [
 
 const SALT = "xn3t_v2_s@lt_2026";
 
+// =============================
+// BASE64
+// =============================
+
 function decodeBase64(value) {
   const binary = atob(value);
   return Uint8Array.from(binary, c => c.charCodeAt(0));
@@ -20,6 +24,10 @@ function decodeUrlBase64(value) {
   s += "=".repeat((4 - s.length % 4) % 4);
   return decodeBase64(s);
 }
+
+// =============================
+// CRYPTO KEY DERIVATION
+// =============================
 
 async function deriveKeys() {
   const joined = KEY_PARTS.join("");
@@ -55,10 +63,18 @@ async function deriveKeys() {
   };
 }
 
+// =============================
+// FERNET DECRYPTION
+// =============================
+
 async function decryptCredential(token, keys) {
   const data = decodeUrlBase64(token);
 
-  if (data.length < 57 || data[0] !== 0x80) {
+  if (
+    data.length < 73 ||
+    data[0] !== 0x80 ||
+    (data.length - 57) % 16 !== 0
+  ) {
     throw new Error("Invalid credential token");
   }
 
@@ -82,7 +98,7 @@ async function decryptCredential(token, keys) {
   );
 
   if (!valid) {
-    throw new Error("Credential HMAC verification failed");
+    throw new Error("HMAC verification failed");
   }
 
   const aesKey = await crypto.subtle.importKey(
@@ -105,13 +121,15 @@ async function decryptCredential(token, keys) {
   const parts = new TextDecoder().decode(plaintext).split(":");
 
   if (parts.length !== 4) {
-    throw new Error("Invalid proxy credential format");
+    throw new Error("Invalid credential format");
   }
 
   const [ip, port, username, password] = parts;
+  const octets = ip.split(".").map(Number);
 
   if (
-    !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip) ||
+    octets.length !== 4 ||
+    octets.some(n => !Number.isInteger(n) || n < 0 || n > 255) ||
     !/^\d+$/.test(port) ||
     Number(port) < 1 ||
     Number(port) > 65535
@@ -119,8 +137,17 @@ async function decryptCredential(token, keys) {
     throw new Error("Invalid proxy address");
   }
 
-  return { ip, port: Number(port), username, password };
+  return {
+    ip,
+    port: Number(port),
+    username,
+    password
+  };
 }
+
+// =============================
+// XRORX API
+// =============================
 
 async function apiRequest(path, token, body) {
   const headers = {
@@ -130,7 +157,8 @@ async function apiRequest(path, token, body) {
     "User-Agent":
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
     "X-Client-Version": "2.0.0",
-    "X-Request-ID": `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`,
+    "X-Request-ID":
+      `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`,
     "X-Timestamp": String(Date.now())
   };
 
@@ -141,18 +169,35 @@ async function apiRequest(path, token, body) {
   const response = await fetch(BASE_URL + path, {
     method: body ? "POST" : "GET",
     headers,
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(25000)
   });
 
   if (!response.ok) {
-    throw new Error(`Xrorx API ${path}: HTTP ${response.status}`);
+    throw new Error(
+      `Xrorx API ${path}: HTTP ${response.status}`
+    );
   }
 
   return response.json();
 }
 
+// =============================
+// REFRESH PROXY DATABASE
+// =============================
+
 async function refreshProxies(env) {
-  // Login and obtain a fresh bearer token
+  if (!env.XRORX_EMAIL || !env.XRORX_PASSWORD) {
+    throw new Error("Missing Xrorx credentials");
+  }
+
+  if (!env.PROXY_KV) {
+    throw new Error("PROXY_KV binding missing");
+  }
+
+  console.log("Starting Xrorx proxy refresh");
+
+  // Login
   const login = await apiRequest(
     "/auth/login",
     null,
@@ -162,30 +207,41 @@ async function refreshProxies(env) {
     }
   );
 
-  const bearer = login.accessToken || login.access_token;
+  const bearer =
+    login.accessToken || login.access_token;
 
   if (!bearer) {
-    throw new Error("Login did not return an access token");
+    throw new Error("Bearer token missing");
   }
 
-  // Check server update information
-  await apiRequest(
+  // Last updated
+  const lastUpdated = await apiRequest(
     "/api/server-checker/last-updated",
     bearer
   );
 
-  // Retrieve encrypted proxies
+  console.log(
+    "Xrorx last updated:",
+    lastUpdated.lastUpdated
+  );
+
+  // Pull encrypted proxies
   const rawProxies = await apiRequest(
     "/api/server-checker/proxies",
     bearer
   );
 
   if (!Array.isArray(rawProxies)) {
-    throw new Error("Unexpected proxy API response");
+    throw new Error("Invalid proxy API response");
   }
+
+  console.log(
+    `Received ${rawProxies.length} encrypted proxies`
+  );
 
   const keys = await deriveKeys();
   const output = [];
+  let failed = 0;
 
   for (const proxy of rawProxies) {
     const encrypted =
@@ -194,25 +250,42 @@ async function refreshProxies(env) {
       proxy.encryptedCredentials ||
       proxy.encrypted_credentials;
 
-    if (!encrypted) continue;
+    if (!encrypted) {
+      failed++;
+      continue;
+    }
 
     try {
-      const credentials = await decryptCredential(encrypted, keys);
+      const credentials = await decryptCredential(
+        encrypted,
+        keys
+      );
 
       output.push({
-        name: proxy.serverName || proxy.server_name || `BD-${output.length + 1}`,
+        name:
+          proxy.serverName ||
+          proxy.server_name ||
+          `BD-${output.length + 1}`,
         ...credentials
       });
+
     } catch (error) {
-      console.error("Proxy decryption failed:", error.message);
+      failed++;
+      console.error(
+        "Proxy decryption failed:",
+        error.message
+      );
     }
   }
 
+  // Never overwrite good data with an empty list
   if (output.length === 0) {
-    throw new Error("No valid proxies decrypted; keeping previous cache");
+    throw new Error(
+      "No valid proxies decrypted; old cache preserved"
+    );
   }
 
-  // Save the new list atomically as one KV value
+  // One KV write for the entire proxy list
   await env.PROXY_KV.put(
     "latest_proxies",
     JSON.stringify(output)
@@ -221,19 +294,36 @@ async function refreshProxies(env) {
   await env.PROXY_KV.put(
     "refresh_status",
     JSON.stringify({
+      success: true,
       updatedAt: new Date().toISOString(),
       count: output.length,
-      success: true
+      failed,
+      apiCount: rawProxies.length,
+      serverLastUpdated: lastUpdated.lastUpdated
     })
   );
 
-  console.log(`Successfully refreshed ${output.length} proxies`);
+  console.log(
+    `Refresh complete: ${output.length} valid, ${failed} failed`
+  );
+
+  return {
+    success: true,
+    count: output.length,
+    failed
+  };
 }
+
+// =============================
+// YAML GENERATOR
+// =============================
 
 function makeProxyYaml(proxies) {
   const entries = proxies.map((p, i) => {
     return [
-      `  - name: ${JSON.stringify(`🇧🇩 ${p.name || `BD-${i + 1}`}`)}`,
+      `  - name: ${JSON.stringify(
+        `🇧🇩 ${p.name || `BD-${i + 1}`}`
+      )}`,
       "    type: socks5",
       `    server: ${p.ip}`,
       `    port: ${p.port}`,
@@ -245,11 +335,18 @@ function makeProxyYaml(proxies) {
   return "proxies:\n" + entries.join("\n") + "\n";
 }
 
-function mainConfig(origin) {
+// =============================
+// MAIN CLASH CONFIG
+// =============================
+
+function mainConfig(origin, workerToken) {
+  const providerURL =
+    `${origin}/proxies?token=${encodeURIComponent(workerToken)}`;
+
   return `proxy-providers:
   myprovider:
     type: http
-    url: "${origin}/proxies?token=abc123"
+    url: "${providerURL}"
     interval: 60
     path: ./proxies.yaml
     health-check:
@@ -300,14 +397,29 @@ rules:
   - MATCH,SELECTOR🙈`;
 }
 
+// =============================
+// WORKER
+// =============================
+
 export default {
+
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.searchParams.get("token") !== env.WORKER_TOKEN) {
-      return new Response("Forbidden", { status: 403 });
+    // Authentication
+    const suppliedToken = url.searchParams.get("token");
+
+    if (
+      !env.WORKER_TOKEN ||
+      !suppliedToken ||
+      suppliedToken !== env.WORKER_TOKEN
+    ) {
+      return new Response("Forbidden", {
+        status: 403
+      });
     }
 
+    // Clash clients only
     const ua = request.headers.get("User-Agent") || "";
 
     const allowedUA = [
@@ -321,16 +433,22 @@ export default {
     ];
 
     if (!allowedUA.some(a => ua.includes(a))) {
-      return new Response("404 Not Found", { status: 404 });
+      return new Response("404 Not Found", {
+        status: 404
+      });
     }
 
+    // Proxy provider
     if (url.pathname === "/proxies") {
-      const cached = await env.PROXY_KV.get("latest_proxies");
+      const cached = await env.PROXY_KV.get(
+        "latest_proxies"
+      );
 
       if (!cached) {
-        return new Response("Proxy list not initialized", {
-          status: 503
-        });
+        return new Response(
+          "Proxy list not initialized. Wait for the first Cron refresh.",
+          { status: 503 }
+        );
       }
 
       return new Response(
@@ -344,29 +462,81 @@ export default {
       );
     }
 
+    // Refresh status
     if (url.pathname === "/status") {
-      const status = await env.PROXY_KV.get("refresh_status");
+      const status = await env.PROXY_KV.get(
+        "refresh_status"
+      );
 
-      return new Response(status || '{"success":false}', {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store"
+      return new Response(
+        status || JSON.stringify({
+          success: false,
+          message: "No refresh completed yet"
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store"
+          }
         }
-      });
+      );
     }
 
-    return new Response(mainConfig(url.origin), {
-      headers: {
-        "Content-Type": "text/yaml; charset=utf-8",
-        "Cache-Control": "no-store"
+    // Manual initial refresh
+    if (url.pathname === "/refresh") {
+      try {
+        const result = await refreshProxies(env);
+
+        return Response.json(result);
+
+      } catch (error) {
+        console.error("Manual refresh failed:", error.message);
+
+        return Response.json(
+          {
+            success: false,
+            error: error.message
+          },
+          { status: 502 }
+        );
       }
+    }
+
+    // Main Clash configuration
+    if (url.pathname === "/") {
+      return new Response(
+        mainConfig(url.origin, env.WORKER_TOKEN),
+        {
+          headers: {
+            "Content-Type": "text/yaml; charset=utf-8",
+            "Cache-Control": "no-store"
+          }
+        }
+      );
+    }
+
+    return new Response("Not Found", {
+      status: 404
     });
   },
 
+  // Automatic refresh every minute
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
-      refreshProxies(env).catch(error => {
-        console.error("Scheduled refresh failed:", error.message);
+      refreshProxies(env).catch(async error => {
+        console.error(
+          "Scheduled refresh failed:",
+          error.message
+        );
+
+        await env.PROXY_KV.put(
+          "refresh_status",
+          JSON.stringify({
+            success: false,
+            error: error.message,
+            failedAt: new Date().toISOString()
+          })
+        );
       })
     );
   }
