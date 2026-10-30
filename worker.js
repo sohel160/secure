@@ -1,4 +1,3 @@
-
 const BASE_URL = "https://xnetapi.xrorx.com";
 
 const KEY_PARTS = [
