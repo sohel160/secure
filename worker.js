@@ -1,1 +1,11 @@
 
+name = "secure"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "PROXY_KV"
+id = "70566d86ce6d4ad38c18409b622e9f42"
+
+[triggers]
+crons = ["* * * * *"]
