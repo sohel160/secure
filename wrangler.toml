@@ -7,7 +7,7 @@ binding = "PROXY_KV"
 id = "70566d86ce6d4ad38c18409b622e9f42"
 
 [vars]
-XRORX_EMAIL = "your-email@example.com"
+XRORX_EMAIL = "darkblazespuky@gmail.com"
 
 [triggers]
 crons = ["* * * * *"]
