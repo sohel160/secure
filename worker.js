@@ -347,12 +347,12 @@ function mainConfig(origin, workerToken) {
   myprovider:
     type: http
     url: "${providerURL}"
-    interval: 60
+    interval: 15
     path: ./proxies.yaml
     health-check:
       enable: true
       url: http://www.gstatic.com/generate_204
-      interval: 60
+      interval: 15
 
 proxy-groups:
   - name: SELECTOR🙈
@@ -365,7 +365,7 @@ proxy-groups:
   - name: STABLE
     type: url-test
     url: https://www.gstatic.com/generate_204
-    interval: 120
+    interval: 15
     tolerance: 20
     lazy: false
     use:
@@ -373,9 +373,9 @@ proxy-groups:
 
   - name: LOAD-BALANCE
     type: load-balance
-    strategy: consistent-hashing
+    strategy: round-robin
     url: https://www.gstatic.com/generate_204
-    interval: 120
+    interval: 15
     lazy: false
     use:
       - myprovider
