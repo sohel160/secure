@@ -352,7 +352,7 @@ function mainConfig(origin, workerToken) {
     health-check:
       enable: true
       url: http://www.gstatic.com/generate_204
-      interval: 15
+      interval: 60
 
 proxy-groups:
   - name: SELECTOR🙈
@@ -365,7 +365,7 @@ proxy-groups:
   - name: STABLE
     type: url-test
     url: https://www.gstatic.com/generate_204
-    interval: 15
+    interval: 60
     tolerance: 20
     lazy: false
     use:
@@ -375,7 +375,7 @@ proxy-groups:
     type: load-balance
     strategy: round-robin
     url: https://www.gstatic.com/generate_204
-    interval: 15
+    interval: 60
     lazy: false
     use:
       - myprovider
