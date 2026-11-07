@@ -10,4 +10,4 @@ id = "70566d86ce6d4ad38c18409b622e9f42"
 XRORX_EMAIL = "darkblazespuky@gmail.com"
 
 [triggers]
-crons = ["* * * * *"]
+crons = ["*/2 * * * *"]
