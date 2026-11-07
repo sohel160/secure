@@ -347,7 +347,7 @@ function mainConfig(origin, workerToken) {
   myprovider:
     type: http
     url: "${providerURL}"
-    interval: 15
+    interval: 60
     path: ./proxies.yaml
     health-check:
       enable: true
